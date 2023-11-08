@@ -1,12 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { CreateUserRequest } from '../requests/create-user.request';
 
 @Controller('users')
 export class UsersController {
     @Get()
     index(
         @Query('keyword') keyword: string,
-        @Query('page') page: number,
-        @Query('limit') limit: number
+        @Query('page', ParseIntPipe) page: number,
+        @Query('limit', ParseIntPipe) limit: number
     ) {
         return {
             keyword: keyword,
@@ -16,21 +17,21 @@ export class UsersController {
     }
 
     @Post()
-    create(@Body() requestBody: object) {
+    create(@Body() requestBody: CreateUserRequest) {
         return {
             requestBody: requestBody
         }
     }
 
     @Get('/:id')
-    show(@Param('id') id: number) {
+    show(@Param('id', ParseIntPipe) id: number) {
         return {
             id: id
         }
     }
 
     @Put('/:id')
-    update(@Param('id') id: number, @Body() requestBody: object) {
+    update(@Param('id', ParseIntPipe) id: number, @Body() requestBody: object) {
         return {
             id: id,
             requestBody: requestBody
@@ -38,7 +39,7 @@ export class UsersController {
     }
 
     @Delete('/:id')
-    destroy(@Param('id') id: number) {
+    destroy(@Param('id', ParseIntPipe) id: number) {
         return {
             id: id
         }
