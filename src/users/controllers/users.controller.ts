@@ -1,33 +1,29 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { CreateUserRequest } from '../requests/create-user.request';
+import { UsersService } from '../providers/users.service';
 
 @Controller('users')
 export class UsersController {
+    constructor(private usersService: UsersService) { }
+
     @Get()
     index(
-        @Query('keyword') keyword: string,
-        @Query('page', ParseIntPipe) page: number,
-        @Query('limit', ParseIntPipe) limit: number
+        @Query('keyword') keyword?: string,
+        @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+        @Query('limit', new ParseIntPipe({ optional: true })) limit?: number
     ) {
-        return {
-            keyword: keyword,
-            page: page,
-            limit: limit,
-        };
+        return this.usersService.search(keyword, page, limit);
     }
 
     @Post()
+    @HttpCode(201)
     create(@Body() requestBody: CreateUserRequest) {
-        return {
-            requestBody: requestBody
-        }
+        this.usersService.create(requestBody);
     }
 
     @Get('/:id')
     show(@Param('id', ParseIntPipe) id: number) {
-        return {
-            id: id
-        }
+        return this.usersService.find(id);
     }
 
     @Put('/:id')
