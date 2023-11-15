@@ -10,13 +10,13 @@ export class UsersService {
     private static users: Array<User> = [];
 
     search(keyword?: string, page?: number, limit?: number): UserResponse[] {
-        return UsersService.users.filter((user: User) => !user.isDeleted && (!keyword || user.email.includes(keyword)))
+        return UsersService.users.filter((user: User) => !user.deletedAt && (!keyword || user.email.includes(keyword)))
             .map((user: User) => new UserResponse(user));
     }
 
     create(createUser: CreateUserRequest): void {
         const user: User = new User();
-        user.id = UsersService.users.length + 1; // TODO: ID tự động tăng
+        user.user_id = UsersService.users.length + 1; // TODO: ID tự động tăng
         user.username = createUser.username;
         user.email = createUser.email;
         user.firstName = createUser.firstName;
@@ -27,7 +27,7 @@ export class UsersService {
     }
 
     find(id: number): UserResponse {
-        const user: User = UsersService.users.find(value => value.id === id && !value.isDeleted);
+        const user: User = UsersService.users.find(value => value.id === id && !value.deletedAt);
 
         // Kiểm tra người dùng có tồn tại hay không ?
         if (!user) {
@@ -38,7 +38,7 @@ export class UsersService {
     }
 
     update(id: number, updateUser: UpdateUserRequest): UserResponse {
-        const user: User = UsersService.users.find(value => value.id === id && !value.isDeleted);
+        const user: User = UsersService.users.find(value => value.id === id && !value.deletedAt);
 
         // Kiểm tra người dùng có tồn tại hay không ?
         if (!user) {
@@ -63,7 +63,7 @@ export class UsersService {
     }
 
     delete(id: number): void {
-        const user: User = UsersService.users.find(value => value.id === id && !value.isDeleted);
+        const user: User = UsersService.users.find(value => value.id === id && !value.deletedAt);
 
         // Kiểm tra người dùng có tồn tại hay không ?
         if (!user) {
@@ -74,7 +74,7 @@ export class UsersService {
             if (id === user.id) {
                 return {
                     ...user,
-                    isDeleted: true,
+                    deletedAt: new Date(),
                 };
             }
 
