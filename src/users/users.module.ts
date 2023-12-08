@@ -11,12 +11,12 @@ import { Role } from './entities/role.entity';
   imports: [
     TypeOrmModule.forFeature([
       User,
-      UserProfile,
-      UserPassword,
-      Role,
-    ])
+      // UserProfile,
+      // UserPassword,
+      // Role,
+    ]),
   ],
   controllers: [UsersController],
-  providers: [UsersService]
+  providers: [UsersService],
 })
-export class UsersModule { }
+export class UsersModule {}

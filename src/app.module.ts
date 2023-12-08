@@ -12,10 +12,12 @@ import { AuthGuard } from './auth/guards/auth.guard';
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: '127.0.0.1',
+      // host: "192.168.1.19",
+
       port: 3306,
       username: 'root',
       password: 'password',
-      database: 'ra_module05',
+      database: 'module5-project',
       entities: [`${__dirname}/**/*.entity.ts`],
       autoLoadEntities: true,
       synchronize: true,
@@ -32,4 +34,4 @@ import { AuthGuard } from './auth/guards/auth.guard';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}
