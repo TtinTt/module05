@@ -1,67 +1,109 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { HttpException, HttpStatus } from '@nestjs/common';
-import { LoginResponse } from '../responses/login.response';
+import {
+  Injectable,
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { LoginRequest } from '../requests/login.request';
-import * as bcrypt from 'bcrypt';
+import { Admin } from 'src/admins/entities/admin.entity';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { LoginRequest } from '../requests/login.request';
+import { LoginResponse } from '../responses/login.response';
+import { JWT_SECRET } from 'src/common/constants';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Admin)
+    private adminRepository: Repository<Admin>,
     private jwtService: JwtService,
   ) {}
 
   async login(loginRequest: LoginRequest): Promise<LoginResponse> {
-    let logginer = null;
-    if (loginRequest.type == 'customer') {
-      logginer = await this.userRepository.findOneBy({
+    let entity;
+    if (loginRequest.type === 'customer') {
+      entity = await this.userRepository.findOneBy({
+        email: loginRequest.email,
+      });
+    } else if (loginRequest.type === 'admin') {
+      entity = await this.adminRepository.findOneBy({
         email: loginRequest.email,
       });
     }
-    //   else if ((loginRequest.type == 'admin')){
-    //      logginer = await this.adminRepository.findOneBy({
-    //         email: loginRequest.email,}
-    //     )}
 
-    // Nếu không tìm thấy người dùng thì trả về lỗi
-    if (!logginer) {
+    if (!entity) {
       throw new UnauthorizedException(
         'Email không tồn tại hoặc mật khẩu không chính xác.',
       );
-    } else if (logginer.status == 0) {
+    }
+
+    if (entity.status === 0) {
       throw new HttpException(
-        'Tài khoản bị vô hiệu hóa, vui lòng liên hệ với quản trị viên để biết thêm thông tin.',
+        'Tài khoản bị vô hiệu hóa, vui lòng liên hệ với quản trị viên.',
         HttpStatus.NOT_ACCEPTABLE,
       );
     }
 
-    // Kiểm tra mật khẩu, nếu không trùng khớp thì trả về lỗi
     const isMatch = await bcrypt.compare(
       loginRequest.password,
-      logginer.password,
+      entity.password,
     );
     if (!isMatch) {
       throw new UnauthorizedException(
         'Email không tồn tại hoặc mật khẩu không chính xác.',
       );
     }
+    let payload;
+    if (loginRequest.type === 'admin') {
+      payload = {
+        sub: entity.id,
+        admin_id: entity.admin_id,
+        email: entity.email,
+        type: entity.type,
+        status: entity.status,
+        // exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+      };
+      const token = await this.jwtService.signAsync(payload);
 
-    // Tạo ra token (sử dụng JWT)
-    const payload = {
-      sub: logginer.userId || logginer.adminId,
-      email: logginer.email,
-    };
-    const token = await this.jwtService.signAsync(payload);
+      return { token };
+    } else if (loginRequest.type === 'customer') {
+      payload = {
+        sub: entity.id,
+        user_id: entity.user_id,
+        email: entity.email,
+        type: entity.type,
+        status: entity.status,
+        verifed: entity.verifed,
+        // exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+      };
+      const token = await this.jwtService.signAsync(payload);
 
-    const loginResponse = new LoginResponse();
-    loginResponse.token = token;
+      return { token };
+    }
+  }
 
-    // Trả về token cho client
-    return loginResponse;
+  async validateToken(
+    token: string,
+    type: 'user' | 'admin',
+  ): Promise<User | Admin> {
+    try {
+      const decoded = this.jwtService.verify(token, { secret: JWT_SECRET });
+      // console.log('decoded', decoded);
+
+      if (type === 'user') {
+        return await this.userRepository.findOneBy({
+          email: decoded.email,
+        });
+      } else if (type === 'admin') {
+        return await this.adminRepository.findOneBy({ email: decoded.email });
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn.');
+    }
   }
 }

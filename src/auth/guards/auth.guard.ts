@@ -1,8 +1,8 @@
 import {
-    CanActivate,
-    ExecutionContext,
-    Injectable,
-    UnauthorizedException,
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -12,44 +12,63 @@ import { IS_PUBLIC_KEY } from '../decorators/auth.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    constructor(private jwtService: JwtService, private reflector: Reflector) { }
+  constructor(
+    private jwtService: JwtService,
+    private reflector: Reflector,
+  ) {}
 
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    // console.log('Kiểm tra request:', request);
 
-        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
-        if (isPublic) {
-            return true;
-        }
+    const userToken = request.headers.usertoken;
+    const adminToken = request.headers.admintoken;
+    console.log('userToken', userToken);
+    console.log('adminToken', adminToken);
 
-        if (!token) {
-            throw new UnauthorizedException();
-        }
-        try {
-            const payload = await this.jwtService.verifyAsync(
-                token,
-                {
-                    secret: JWT_SECRET
-                }
-            );
-            // 💡 We're assigning the payload to the request object here
-            // so that we can access it in our route handlers
-            request['user'] = payload;
-            console.log(token)
-            console.log(payload)
-        } catch (error) {
-            console.error(error);
-            throw new UnauthorizedException();
-        }
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
+    if (userToken) {
+      const userPayload = await this.validateToken(userToken, 'user');
+      if (userPayload) {
+        request.user = userPayload;
+        // console.log(request);
+
         return true;
+      }
     }
 
-    private extractTokenFromHeader(request: Request): string | undefined {
-        const [type, token] = request.headers.authorization?.split(' ') ?? [];
-        return type === 'Bearer' ? token : undefined;
+    if (adminToken) {
+      const adminPayload = await this.validateToken(adminToken, 'admin');
+      if (adminPayload) {
+        console.log('adminPayload', adminPayload);
+
+        request.admin = adminPayload;
+        request.isAdminSuper = adminPayload.admin_id == 1;
+        console.log(request);
+
+        return true;
+      }
     }
+
+    throw new UnauthorizedException();
+  }
+
+  private async validateToken(
+    token: string,
+    type: 'user' | 'admin',
+  ): Promise<any> {
+    try {
+      return await this.jwtService.verifyAsync(token, { secret: JWT_SECRET });
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return null;
+    }
+  }
 }

@@ -9,9 +9,12 @@ export class UserResponse {
   phone: string;
   img: string;
   status: number;
+  cart: object;
+  date: string;
+  verifed: number;
 
   constructor(user: User) {
-    this.user_id = user.userId;
+    this.user_id = user.user_id;
     this.email = user.email;
     this.name = user.name || null;
     this.bday = user.bday || null;
@@ -19,5 +22,8 @@ export class UserResponse {
     this.phone = user.phone || null;
     this.img = user.img || null;
     this.status = user.status;
+    this.cart = user.cart;
+    this.date = user.date;
+    this.verifed = user.verifed;
   }
 }
