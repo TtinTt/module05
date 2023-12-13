@@ -18,7 +18,7 @@ import { OrderResponse } from '../responses/order.response';
 import { CreateOrderRequest } from '../requests/create-order.request';
 import { UpdateOrderRequest } from '../requests/update-order.request';
 // import { UpdateOrderRequest } from '../requests/update-order.request';
-
+import { sendEmail } from 'src/common/email.server';
 // Tài liệu: https://docs.nestjs.com/providers#services
 
 @Injectable()
@@ -61,6 +61,12 @@ export class OrdersService {
     newOrder.date = createOrderDto.date;
 
     try {
+      console.log('Order có dạng:', newOrder);
+
+      let emailContent = this.createOrderConfirmationEmail(createOrderDto);
+      let emailSubject = `Cozy - Xác nhận đơn hàng`;
+      await sendEmail(createOrderDto.email, emailSubject, emailContent);
+
       // Lưu entity vào cơ sở dữ liệu
       const order = await this.orderRepository.save(newOrder);
 
@@ -68,6 +74,39 @@ export class OrdersService {
     } catch (error) {
       throw error;
     }
+  }
+  private createOrderConfirmationEmail(order) {
+    // Không cần phân tích JSON nữa vì order đã là đối tượng JavaScript
+    // Tạo phần đầu của email
+    let total = 0;
+    let emailContent = `${order.address.name} thân mến!\n\nCảm ơn bạn đã đặt hàng tại cửa hàng của chúng tôi. Đây là xác nhận cho đơn hàng của bạn:\n\n`;
+
+    // Thêm thông tin các sản phẩm
+    order.cart.forEach((item, index) => {
+      let isDiscount = item.comparative && item.price < item.comparative;
+      let discount = isDiscount
+        ? `(Giảm giá ${Math.round((1 - item.price / item.comparative) * 100)}%)`
+        : '';
+      emailContent += `Sản phẩm ${index + 1}:\n- Tên: ${
+        item.name
+      }\n- Số lượng: ${item.quantity}\n- Giá: ${
+        item.price
+      } ${discount} VND\n\n\n`;
+      total = item.price * item.quantity++;
+    });
+
+    // Thêm thông tin giao hàng
+    emailContent += `Địa chỉ giao hàng:\n${order.address.address}\nSố điện thoại: ${order.address.phoneNumber}\nGhi chú: ${order.address.note}\n\n`;
+
+    // Thêm thông tin ngày đặt hàng và trạng thái
+    emailContent += `Ngày đặt hàng: ${order.date}\nTrạng thái đơn hàng: ${
+      order.status === 0 ? 'Đang xử lý' : 'Không xác định'
+    }\n\nĐơn hàng sẽ giao tới địa chỉ của bạn trong vòng 4-10 ngày làm việc. \nBạn cần thanh toán ${total} VND khi nhận hàng.\n`;
+
+    // Kết thúc email
+    emailContent += `Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi.\n\nTrân trọng,\nCozy`;
+
+    return emailContent;
   }
 
   async update(id: number, updateOrder: UpdateOrderRequest) {

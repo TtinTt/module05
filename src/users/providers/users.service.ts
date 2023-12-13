@@ -21,6 +21,7 @@ import { generateRandomCode } from 'src/common/function';
 import * as nodemailer from 'nodemailer';
 import { JwtService } from '@nestjs/jwt';
 import { JWT_SECRET } from 'src/common/constants';
+import { sendEmail } from 'src/common/email.server';
 
 // Tài liệu: https://docs.nestjs.com/providers#services
 @Injectable()
@@ -211,7 +212,7 @@ export class UsersService {
  <p>Lưu ý rằng mã chỉ có hiệu lực trong vòng 5 phút.</p>
  <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
 `;
-    await this.sendEmail(email, subject, text2); // Giả định rằng EmailService có phương thức sendEmail
+    await sendEmail(email, subject, text2); // Giả định rằng EmailService có phương thức sendEmail
   }
 
   async sentVerificationEmail(email: string): Promise<void> {
@@ -244,7 +245,7 @@ export class UsersService {
     console.log('Xác thực email', verificationUrl);
     console.log('Gửi đi token', token);
 
-    await this.sendEmail(email, subject, text);
+    await sendEmail(email, subject, text);
   }
 
   async verificationEmail(token: string): Promise<string> {
@@ -278,36 +279,37 @@ export class UsersService {
       }
     }
   }
-  private sendEmail = (to, subject, text) => {
-    const mailOptions = {
-      from: 'COZYhandmade2032@outlook.com',
-      to: to,
-      subject: subject,
-      text: text,
-    };
+  
+  // private sendEmail = (to, subject, text) => {
+  //   const mailOptions = {
+  //     from: 'COZYhandmade2032@outlook.com',
+  //     to: to,
+  //     subject: subject,
+  //     text: text,
+  //   };
 
-    let transporter = nodemailer.createTransport({
-      host: 'smtp-mail.outlook.com', // hostname
-      secureConnection: false, // TLS requires secureConnection to be false
-      port: 587, // port for secure SMTP
-      service: 'Outlook365',
-      auth: {
-        user: 'COZYhandmade2032@outlook.com',
-        pass: 'COZY2032handmade',
-      },
-      tls: {
-        ciphers: 'SSLv3',
-      },
-    });
+  //   let transporter = nodemailer.createTransport({
+  //     host: 'smtp-mail.outlook.com', // hostname
+  //     secureConnection: false, // TLS requires secureConnection to be false
+  //     port: 587, // port for secure SMTP
+  //     service: 'Outlook365',
+  //     auth: {
+  //       user: 'COZYhandmade2032@outlook.com',
+  //       pass: 'COZY2032handmade',
+  //     },
+  //     tls: {
+  //       ciphers: 'SSLv3',
+  //     },
+  //   });
 
-    transporter.sendMail(mailOptions, function (error, info) {
-      if (error) {
-        console.log(error);
-      } else {
-        console.log('Email sent: ' + info.response);
-      }
-    });
-  };
+  //   transporter.sendMail(mailOptions, function (error, info) {
+  //     if (error) {
+  //       console.log(error);
+  //     } else {
+  //       console.log('Email sent: ' + info.response);
+  //     }
+  //   });
+  // };
 
   private isCodeExpired = (codeLong, code) => {
     const parts = codeLong.split('_');
